@@ -1,0 +1,40 @@
+// Prisma schema for the Inlaze/Commizzion campaign analytics platform.
+// Models the relationship between operators (affiliates/partners) and
+// their advertising campaigns, optimized for ROAS (Return on Ad Spend) analysis.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// An operator (affiliate partner) who runs advertising campaigns.
+/// In the iGaming context, operators are the brands/casinos being promoted.
+model Operator {
+  id        String     @id @default(cuid())
+  name      String
+  campaigns Campaign[]
+  createdAt DateTime   @default(now())
+}
+
+/// A single advertising campaign with performance metrics.
+/// ROAS = revenue / spend — the key metric for measuring campaign profitability.
+model Campaign {
+  id         String   @id @default(cuid())
+  name       String
+  spend      Float
+  revenue    Float
+  /// Precomputed ROAS (Return on Ad Spend) = revenue / spend
+  roas       Float
+  operator   Operator @relation(fields: [operatorId], references: [id])
+  operatorId String
+  /// Date the campaign performance was recorded
+  reportDate DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([operatorId])
+  @@index([reportDate])
+}

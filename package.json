@@ -1,0 +1,46 @@
+{
+  "name": "inlaze-automation-challenge",
+  "version": "1.0.0",
+  "description": "Prueba Técnica — Desarrollador de Automatizaciones e IA (Inlaze)",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "tsx src/part1-api-integration/index.ts",
+    "start:part1": "tsx src/part1-api-integration/index.ts",
+    "start:part4": "tsx src/part4-llm-classification/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src/ --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev"
+  },
+  "keywords": [
+    "inlaze",
+    "automation",
+    "typescript",
+    "n8n",
+    "llm"
+  ],
+  "author": "Fernando Vega <fernando@vegadev.co>",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.82.0",
+    "@prisma/client": "^5.22.0",
+    "axios": "^1.14.0",
+    "dotenv": "^17.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@typescript-eslint/eslint-plugin": "^8.58.0",
+    "@typescript-eslint/parser": "^8.58.0",
+    "eslint": "^10.1.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.8.1",
+    "prisma": "^5.22.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.2"
+  }
+}

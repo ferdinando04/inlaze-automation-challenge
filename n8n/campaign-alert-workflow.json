@@ -1,0 +1,267 @@
+{
+  "name": "Campaign Alert System — Inlaze",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "campaign-alerts",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "campaign-alerts"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "id": "rule-critical",
+                    "leftValue": "={{ $json.classification }}",
+                    "rightValue": "Critical",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": "Critical"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "id": "rule-warning",
+                    "leftValue": "={{ $json.classification }}",
+                    "rightValue": "Warning",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": "Warning"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "id": "rule-ok",
+                    "leftValue": "={{ $json.classification }}",
+                    "rightValue": "OK",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": "OK"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "switch-classification",
+      "name": "Route by Classification",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DISCORD_WEBHOOK_URL || 'https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"embeds\": [\n    {\n      \"title\": \"🚨 CRITICAL Alert: {{ $json.campaignName }}\",\n      \"color\": 16711680,\n      \"fields\": [\n        { \"name\": \"Campaign ID\", \"value\": \"{{ $json.id }}\", \"inline\": true },\n        { \"name\": \"Metric (ROAS)\", \"value\": \"{{ $json.metric }}\", \"inline\": true },\n        { \"name\": \"Spend\", \"value\": \"${{ $json.spend }}\", \"inline\": true },\n        { \"name\": \"Revenue\", \"value\": \"${{ $json.revenue }}\", \"inline\": true },\n        { \"name\": \"Classification\", \"value\": \"{{ $json.classification }}\", \"inline\": true },\n        { \"name\": \"Report Date\", \"value\": \"{{ $json.reportDate }}\", \"inline\": true }\n      ],\n      \"footer\": { \"text\": \"Inlaze Campaign Monitor — Automated Alert\" },\n      \"timestamp\": \"{{ $now.toISO() }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "discord-alert",
+      "name": "Discord Critical Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [740, 160]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://httpbin.org/post",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"action\": \"append_to_sheet\",\n  \"sheetName\": \"Campaign Warnings\",\n  \"data\": {\n    \"campaignId\": \"{{ $json.id }}\",\n    \"campaignName\": \"{{ $json.campaignName }}\",\n    \"metric\": {{ $json.metric }},\n    \"spend\": {{ $json.spend }},\n    \"revenue\": {{ $json.revenue }},\n    \"classification\": \"{{ $json.classification }}\",\n    \"reportDate\": \"{{ $json.reportDate }}\",\n    \"loggedAt\": \"{{ $now.toISO() }}\"\n  }\n}",
+        "options": {}
+      },
+      "id": "sheets-warning",
+      "name": "Google Sheets (Simulated)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [740, 300]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "noop-ok",
+      "name": "OK — No Action",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [740, 460]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"processed\",\n  \"campaignId\": \"{{ $json.id }}\",\n  \"classification\": \"{{ $json.classification }}\",\n  \"action\": \"{{ $json.classification === 'Critical' ? 'discord_alert_sent' : $json.classification === 'Warning' ? 'logged_to_sheet' : 'no_action' }}\",\n  \"processedAt\": \"{{ $now.toISO() }}\"\n}",
+        "options": {}
+      },
+      "id": "respond-critical",
+      "name": "Respond (Critical)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [980, 160]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"processed\",\n  \"campaignId\": \"{{ $json.id }}\",\n  \"classification\": \"{{ $json.classification }}\",\n  \"action\": \"logged_to_sheet\",\n  \"processedAt\": \"{{ $now.toISO() }}\"\n}",
+        "options": {}
+      },
+      "id": "respond-warning",
+      "name": "Respond (Warning)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [980, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"processed\",\n  \"campaignId\": \"{{ $json.id }}\",\n  \"classification\": \"OK\",\n  \"action\": \"no_action\",\n  \"processedAt\": \"{{ $now.toISO() }}\"\n}",
+        "options": {}
+      },
+      "id": "respond-ok",
+      "name": "Respond (OK)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [980, 460]
+    },
+    {
+      "parameters": {},
+      "id": "error-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [240, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Error handler that logs structured error details\n * WITHOUT stopping workflow execution.\n *\n * Why structured logging? In production, these logs feed into\n * monitoring dashboards (Datadog, Grafana) for alerting on\n * workflow failures that need human intervention.\n */\nconst errorData = items[0].json;\n\nconst errorLog = {\n  level: 'ERROR',\n  source: 'n8n-campaign-alert-workflow',\n  failedNode: errorData.execution?.error?.node || 'unknown',\n  errorMessage: errorData.execution?.error?.message || 'Unknown error',\n  workflowId: errorData.workflow?.id || 'unknown',\n  executionId: errorData.execution?.id || 'unknown',\n  timestamp: new Date().toISOString(),\n  context: 'Error captured by Error Trigger — workflow continues for other items'\n};\n\nreturn [{ json: errorLog }];"
+      },
+      "id": "error-logger",
+      "name": "Error Logger",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 600]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Route by Classification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Classification": {
+      "main": [
+        [
+          {
+            "node": "Discord Critical Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Google Sheets (Simulated)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "OK — No Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discord Critical Alert": {
+      "main": [
+        [
+          {
+            "node": "Respond (Critical)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets (Simulated)": {
+      "main": [
+        [
+          {
+            "node": "Respond (Warning)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OK — No Action": {
+      "main": [
+        [
+          {
+            "node": "Respond (OK)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Error Logger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "inlaze" },
+    { "name": "campaign-monitoring" },
+    { "name": "igaming" }
+  ],
+  "triggerCount": 1,
+  "pinData": {}
+}
