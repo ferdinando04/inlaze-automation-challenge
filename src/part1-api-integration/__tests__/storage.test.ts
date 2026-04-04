@@ -12,15 +12,15 @@ function buildClassifiedReport(
 ): ClassifiedCampaignReport {
   return {
     id: "camp-001",
-    campaignName: "Test Campaign",
+    name: "Test Campaign",
     metric: 0.5,
     spend: 5000,
     revenue: 2000,
     impressions: 100000,
     clicks: 3000,
     reportDate: "2026-04-01T00:00:00Z",
-    classification: "Critical",
-    classifiedAt: "2026-04-02T10:00:00Z",
+    status: "critical",
+    evaluatedAt: "2026-04-02T10:00:00Z",
     ...overrides,
   };
 }
@@ -41,17 +41,17 @@ describe("saveResultsToJson", () => {
     expect(fs.existsSync(TEST_OUTPUT_PATH)).toBe(true);
     const content = JSON.parse(fs.readFileSync(TEST_OUTPUT_PATH, "utf-8"));
     expect(content.reports).toHaveLength(1);
-    expect(content.reports[0].classification).toBe("Critical");
+    expect(content.reports[0].status).toBe("critical");
     expect(content.generatedAt).toBeDefined();
     expect(content.summary).toBeDefined();
   });
 
   it("includes correct classification summary counts", async () => {
     const reports = [
-      buildClassifiedReport({ id: "1", classification: "Critical" }),
-      buildClassifiedReport({ id: "2", classification: "Warning" }),
-      buildClassifiedReport({ id: "3", classification: "OK" }),
-      buildClassifiedReport({ id: "4", classification: "OK" }),
+      buildClassifiedReport({ id: "1", status: "critical" }),
+      buildClassifiedReport({ id: "2", status: "warning" }),
+      buildClassifiedReport({ id: "3", status: "ok" }),
+      buildClassifiedReport({ id: "4", status: "ok" }),
     ];
 
     await saveResultsToJson(reports, TEST_OUTPUT_PATH);
@@ -86,7 +86,7 @@ describe("saveResultsToJson", () => {
 describe("loadResultsFromJson", () => {
   it("reads previously saved results with full fidelity", async () => {
     const reports = [
-      buildClassifiedReport({ id: "load-test", campaignName: "Fidelity Test" }),
+      buildClassifiedReport({ id: "load-test", name: "Fidelity Test" }),
     ];
     await saveResultsToJson(reports, TEST_OUTPUT_PATH);
 
@@ -94,7 +94,7 @@ describe("loadResultsFromJson", () => {
 
     expect(loaded.reports).toHaveLength(1);
     expect(loaded.reports[0].id).toBe("load-test");
-    expect(loaded.reports[0].campaignName).toBe("Fidelity Test");
+    expect(loaded.reports[0].name).toBe("Fidelity Test");
     expect(loaded.generatedAt).toBeDefined();
   });
 

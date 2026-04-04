@@ -33,7 +33,7 @@ const logger = createLogger("part1-orchestrator");
 const SAMPLE_CAMPAIGNS: CampaignReport[] = [
   {
     id: "camp-001",
-    campaignName: "Summer Slots Promo — LatAm",
+    name: "Summer Slots Promo — LatAm",
     metric: 0.4,
     spend: 12000,
     revenue: 3200,
@@ -43,7 +43,7 @@ const SAMPLE_CAMPAIGNS: CampaignReport[] = [
   },
   {
     id: "camp-002",
-    campaignName: "Live Casino Launch — Colombia",
+    name: "Live Casino Launch — Colombia",
     metric: 1.8,
     spend: 8000,
     revenue: 14400,
@@ -53,7 +53,7 @@ const SAMPLE_CAMPAIGNS: CampaignReport[] = [
   },
   {
     id: "camp-003",
-    campaignName: "Sports Betting Q2 — Brazil",
+    name: "Sports Betting Q2 — Brazil",
     metric: 3.5,
     spend: 5000,
     revenue: 17500,
@@ -63,7 +63,7 @@ const SAMPLE_CAMPAIGNS: CampaignReport[] = [
   },
   {
     id: "camp-004",
-    campaignName: "Poker Tournament Ads — Mexico",
+    name: "Poker Tournament Ads — Mexico",
     metric: 0.9,
     spend: 15000,
     revenue: 7500,
@@ -73,7 +73,7 @@ const SAMPLE_CAMPAIGNS: CampaignReport[] = [
   },
   {
     id: "camp-005",
-    campaignName: "VIP Loyalty Program — Argentina",
+    name: "VIP Loyalty Program — Argentina",
     metric: 4.2,
     spend: 3000,
     revenue: 12600,
@@ -83,7 +83,7 @@ const SAMPLE_CAMPAIGNS: CampaignReport[] = [
   },
   {
     id: "camp-006",
-    campaignName: "Crash Games Social Ads",
+    name: "Crash Games Social Ads",
     metric: 2.1,
     spend: 6500,
     revenue: 13650,
@@ -93,7 +93,7 @@ const SAMPLE_CAMPAIGNS: CampaignReport[] = [
   },
   {
     id: "camp-007",
-    campaignName: "Affiliate Onboarding — Peru",
+    name: "Affiliate Onboarding — Peru",
     metric: 0.3,
     spend: 20000,
     revenue: 4800,
@@ -103,7 +103,7 @@ const SAMPLE_CAMPAIGNS: CampaignReport[] = [
   },
   {
     id: "camp-008",
-    campaignName: "Bingo Retargeting — Chile",
+    name: "Bingo Retargeting — Chile",
     metric: 2.8,
     spend: 4500,
     revenue: 12600,
@@ -152,9 +152,9 @@ async function main(): Promise<void> {
   // Log a human-readable summary for quick assessment
   const summary = {
     total: classified.length,
-    critical: classified.filter((r) => r.classification === "Critical").length,
-    warning: classified.filter((r) => r.classification === "Warning").length,
-    ok: classified.filter((r) => r.classification === "OK").length,
+    critical: classified.filter((r) => r.status === "critical").length,
+    warning: classified.filter((r) => r.status === "warning").length,
+    ok: classified.filter((r) => r.status === "ok").length,
   };
 
   logger.info("Pipeline completed successfully", { summary, outputPath });

@@ -1,47 +1,40 @@
-# Prompt de Clasificacion de Resenas — Anthropic Claude
+# LLM Prompt — Campaign Executive Summary
 
-## Estrategia
-
-Se utiliza un **system prompt** que define el rol del modelo como clasificador experto de resenas de aplicaciones en espanol, junto con un **user prompt** estructurado que envia las resenas en lotes (batches) de 10 para optimizar el uso de tokens.
+## Model
+`claude-haiku-4-5-20251001` (Anthropic) — selected for low cost and fast inference.
 
 ## System Prompt
 
 ```
-Eres un clasificador experto de resenas de aplicaciones moviles en espanol latinoamericano.
+Eres un analista senior de performance marketing en la industria de iGaming.
 
-Tu tarea es clasificar cada resena en exactamente UNA de estas categorias:
-- **Positivo**: El usuario expresa satisfaccion, elogia funcionalidades, recomienda la app o muestra gratitud.
-- **Negativo**: El usuario expresa frustracion, reporta bugs, se queja del servicio, o muestra insatisfaccion.
-- **Spam**: La resena NO es una opinion genuina. Incluye: promociones de productos/servicios externos, enlaces sospechosos, texto sin sentido o generado automaticamente, resenas copiadas/plantilla, contenido que no tiene relacion con la app.
+Tu tarea es generar un resumen ejecutivo en español basado en los datos de campañas publicitarias que recibirás. El resumen debe:
+
+1. Identificar y destacar por nombre y métrica las campañas en estado "critical"
+2. Resumir el estado general de las campañas en "warning"
+3. Sugerir al menos una acción concreta basada en los datos recibidos
 
 Reglas:
-1. Si la resena es Spam, DEBES explicar brevemente POR QUE es spam en el campo "spamReason".
-2. Si NO es spam, "spamReason" debe ser null.
-3. Asigna un "confidence" entre 0.0 y 1.0 indicando tu nivel de certeza.
-4. Responde UNICAMENTE con un JSON array valido, sin texto adicional ni markdown.
+- Máximo 150 palabras
+- Formato de resumen ejecutivo profesional
+- Lenguaje directo y orientado a la acción
+- Responde SOLO con el texto del resumen, sin markdown ni encabezados
 ```
 
-## User Prompt (por batch)
+## User Prompt Template
 
 ```
-Clasifica las siguientes resenas. Responde SOLO con un JSON array valido.
+Genera un resumen ejecutivo de las siguientes {N} campañas:
 
-Formato por cada resena:
-{"reviewId": <number>, "category": "Positivo"|"Negativo"|"Spam", "spamReason": <string|null>, "confidence": <0.0-1.0>}
-
-Resenas:
-[1] "Excelente app, muy facil de usar y rapida"
-[2] "Gana dinero facil desde casa visitando bit.ly/xxxxx"
-[3] "La app se cierra sola cada vez que abro la camara"
+- [CRITICAL] "Summer Slots Promo — LatAm" — métrica: 0.4
+- [WARNING] "Live Casino Launch — Colombia" — métrica: 1.8
+- [OK] "Sports Betting Q2 — Brazil" — métrica: 3.5
 ...
 ```
 
-## Por que Anthropic Claude (y no OpenAI)
+## Design Decisions
 
-1. **Alineacion con el evaluador**: Inlaze usa Claude para evaluar las pruebas tecnicas. Usar la misma familia de modelos demuestra conocimiento del ecosistema del cliente.
-2. **Calidad en espanol**: Claude tiene excelente comprension del espanol latinoamericano, crucial para detectar spam culturalmente especifico.
-3. **Structured output**: Claude respeta consistentemente las instrucciones de formato JSON.
-
-## Modelo seleccionado
-
-`claude-haiku-4-5-20251001` — Optimizado para tareas de clasificacion con baja latencia y costo reducido. Para 100 resenas en batches de 10, el costo estimado es ~$0.01 USD.
+- **150-word limit**: Forces concise, actionable output — avoids LLM verbosity.
+- **Status labels in uppercase**: Makes it trivial for the model to identify severity tiers.
+- **"At least one action"**: Ensures the summary is prescriptive, not just descriptive.
+- **Spanish output**: Matches Inlaze's LatAm market context.

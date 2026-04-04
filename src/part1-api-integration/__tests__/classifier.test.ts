@@ -6,7 +6,7 @@ import { CampaignReport } from "../types";
 function buildReport(overrides: Partial<CampaignReport> = {}): CampaignReport {
   return {
     id: "test-001",
-    campaignName: "Test Campaign",
+    name: "Test Campaign",
     metric: 3.0,
     spend: 1000,
     revenue: 3000,
@@ -18,72 +18,72 @@ function buildReport(overrides: Partial<CampaignReport> = {}): CampaignReport {
 }
 
 describe("getClassificationLevel", () => {
-  it("returns Critical for metric < 1.0", () => {
-    expect(getClassificationLevel(0.5)).toBe("Critical");
+  it("returns critical for metric < 1.0", () => {
+    expect(getClassificationLevel(0.5)).toBe("critical");
   });
 
-  it("returns Critical for metric = 0 (edge case)", () => {
-    expect(getClassificationLevel(0)).toBe("Critical");
+  it("returns critical for metric = 0 (edge case)", () => {
+    expect(getClassificationLevel(0)).toBe("critical");
   });
 
-  it("returns Critical for negative metric", () => {
-    expect(getClassificationLevel(-1.5)).toBe("Critical");
+  it("returns critical for negative metric", () => {
+    expect(getClassificationLevel(-1.5)).toBe("critical");
   });
 
-  it("returns Warning for metric = 1.0 (boundary — lower inclusive)", () => {
-    expect(getClassificationLevel(1.0)).toBe("Warning");
+  it("returns warning for metric = 1.0 (boundary — lower inclusive)", () => {
+    expect(getClassificationLevel(1.0)).toBe("warning");
   });
 
-  it("returns Warning for metric = 2.4", () => {
-    expect(getClassificationLevel(2.4)).toBe("Warning");
+  it("returns warning for metric = 2.4", () => {
+    expect(getClassificationLevel(2.4)).toBe("warning");
   });
 
-  it("returns OK for metric = 2.5 (boundary — lower inclusive)", () => {
-    expect(getClassificationLevel(2.5)).toBe("OK");
+  it("returns ok for metric = 2.5 (boundary — lower inclusive)", () => {
+    expect(getClassificationLevel(2.5)).toBe("ok");
   });
 
-  it("returns OK for metric = 5.0", () => {
-    expect(getClassificationLevel(5.0)).toBe("OK");
+  it("returns ok for metric = 5.0", () => {
+    expect(getClassificationLevel(5.0)).toBe("ok");
   });
 });
 
 describe("classifyCampaign", () => {
-  it("classifies metric < 1.0 as Critical", () => {
+  it("classifies metric < 1.0 as critical", () => {
     const report = buildReport({ metric: 0.5 });
     const result = classifyCampaign(report);
-    expect(result.classification).toBe("Critical");
+    expect(result.status).toBe("critical");
   });
 
-  it("classifies metric = 1.0 as Warning (boundary)", () => {
+  it("classifies metric = 1.0 as warning (boundary)", () => {
     const report = buildReport({ metric: 1.0 });
     const result = classifyCampaign(report);
-    expect(result.classification).toBe("Warning");
+    expect(result.status).toBe("warning");
   });
 
-  it("classifies metric = 2.5 as OK (boundary)", () => {
+  it("classifies metric = 2.5 as ok (boundary)", () => {
     const report = buildReport({ metric: 2.5 });
     const result = classifyCampaign(report);
-    expect(result.classification).toBe("OK");
+    expect(result.status).toBe("ok");
   });
 
   it("preserves all original report fields", () => {
-    const report = buildReport({ id: "preserve-test", campaignName: "Preserve Me", metric: 3.0 });
+    const report = buildReport({ id: "preserve-test", name: "Preserve Me", metric: 3.0 });
     const result = classifyCampaign(report);
     expect(result.id).toBe("preserve-test");
-    expect(result.campaignName).toBe("Preserve Me");
+    expect(result.name).toBe("Preserve Me");
     expect(result.spend).toBe(1000);
     expect(result.revenue).toBe(3000);
   });
 
-  it("adds classifiedAt timestamp", () => {
+  it("adds evaluatedAt timestamp", () => {
     const report = buildReport({ metric: 3.0 });
     const before = new Date().toISOString();
     const result = classifyCampaign(report);
     const after = new Date().toISOString();
 
-    expect(result.classifiedAt).toBeDefined();
-    expect(result.classifiedAt >= before).toBe(true);
-    expect(result.classifiedAt <= after).toBe(true);
+    expect(result.evaluatedAt).toBeDefined();
+    expect(result.evaluatedAt >= before).toBe(true);
+    expect(result.evaluatedAt <= after).toBe(true);
   });
 });
 
@@ -97,9 +97,9 @@ describe("classifyCampaigns", () => {
     const results = classifyCampaigns(reports);
 
     expect(results).toHaveLength(3);
-    expect(results[0].classification).toBe("Critical");
-    expect(results[1].classification).toBe("Warning");
-    expect(results[2].classification).toBe("OK");
+    expect(results[0].status).toBe("critical");
+    expect(results[1].status).toBe("warning");
+    expect(results[2].status).toBe("ok");
   });
 
   it("handles empty array gracefully", () => {

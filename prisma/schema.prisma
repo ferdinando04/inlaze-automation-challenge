@@ -1,6 +1,6 @@
 // Prisma schema for the Inlaze/Commizzion campaign analytics platform.
-// Models the relationship between operators (affiliates/partners) and
-// their advertising campaigns, optimized for ROAS (Return on Ad Spend) analysis.
+// Models the relationship between operators, campaigns, and their performance
+// metrics, optimized for ROAS (Return on Ad Spend) time-series analysis.
 
 generator client {
   provider = "prisma-client-js"
@@ -20,21 +20,28 @@ model Operator {
   createdAt DateTime   @default(now())
 }
 
-/// A single advertising campaign with performance metrics.
-/// ROAS = revenue / spend — the key metric for measuring campaign profitability.
+/// A single advertising campaign belonging to an operator.
 model Campaign {
-  id         String   @id @default(cuid())
+  id         String             @id @default(cuid())
   name       String
-  spend      Float
-  revenue    Float
-  /// Precomputed ROAS (Return on Ad Spend) = revenue / spend
-  roas       Float
-  operator   Operator @relation(fields: [operatorId], references: [id])
+  operator   Operator           @relation(fields: [operatorId], references: [id])
   operatorId String
-  /// Date the campaign performance was recorded
-  reportDate DateTime
-  createdAt  DateTime @default(now())
+  metrics    CampaignMetric[]
+  createdAt  DateTime           @default(now())
 
   @@index([operatorId])
-  @@index([reportDate])
+}
+
+/// A time-series performance metric snapshot for a campaign.
+/// ROAS (Return on Ad Spend) is recorded per snapshot, enabling
+/// historical trend analysis and 7-day rolling averages.
+model CampaignMetric {
+  id         String   @id @default(cuid())
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+  campaignId String
+  roas       Float
+  recordedAt DateTime
+
+  @@index([campaignId])
+  @@index([recordedAt])
 }

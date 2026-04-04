@@ -9,7 +9,7 @@
 /** Raw campaign data as received from the external API */
 export interface CampaignReport {
   id: string;
-  campaignName: string;
+  name: string;
   /** The key performance metric used for classification (e.g., ROAS, CTR) */
   metric: number;
   /** Total ad spend in USD */
@@ -26,17 +26,17 @@ export interface CampaignReport {
 
 /**
  * Classification severity based on the metric value:
- * - Critical: metric < 1.0 (immediate attention required — campaign is losing money)
- * - Warning: metric < 2.5 (needs monitoring — campaign underperforming)
- * - OK: metric >= 2.5 (performing well — no action needed)
+ * - critical: metric < 1.0 (immediate attention required — campaign is losing money)
+ * - warning: metric < 2.5 (needs monitoring — campaign underperforming)
+ * - ok: metric >= 2.5 (performing well — no action needed)
  */
-export type ClassificationLevel = "Critical" | "Warning" | "OK";
+export type ClassificationLevel = "ok" | "warning" | "critical";
 
 /** Campaign report enriched with its classification level */
 export interface ClassifiedCampaignReport extends CampaignReport {
-  classification: ClassificationLevel;
+  status: ClassificationLevel;
   /** ISO 8601 timestamp of when the classification was performed */
-  classifiedAt: string;
+  evaluatedAt: string;
 }
 
 /** Configuration for the exponential backoff retry mechanism */

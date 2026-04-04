@@ -20,14 +20,14 @@ import {
 /**
  * Determines the classification level for a given metric value.
  * Uses strict threshold boundaries as specified in the requirements:
- *   metric < 1.0  → Critical
- *   metric < 2.5  → Warning
- *   metric >= 2.5 → OK
+ *   metric < 1.0  → critical
+ *   metric < 2.5  → warning
+ *   metric >= 2.5 → ok
  */
 export function getClassificationLevel(metric: number): ClassificationLevel {
-  if (metric < 1.0) return "Critical";
-  if (metric < 2.5) return "Warning";
-  return "OK";
+  if (metric < 1.0) return "critical";
+  if (metric < 2.5) return "warning";
+  return "ok";
 }
 
 /**
@@ -37,8 +37,8 @@ export function getClassificationLevel(metric: number): ClassificationLevel {
 export function classifyCampaign(report: CampaignReport): ClassifiedCampaignReport {
   return {
     ...report,
-    classification: getClassificationLevel(report.metric),
-    classifiedAt: new Date().toISOString(),
+    status: getClassificationLevel(report.metric),
+    evaluatedAt: new Date().toISOString(),
   };
 }
 

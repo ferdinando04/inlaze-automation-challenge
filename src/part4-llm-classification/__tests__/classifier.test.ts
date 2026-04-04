@@ -1,105 +1,108 @@
-import { describe, it, expect } from "vitest";
-import {
-  buildClassificationPrompt,
-  parseClassificationResponse,
-} from "../classifier";
-import { AppReview } from "../types";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { buildSummaryPrompt, generateCampaignSummary } from "../classifier";
+import { ClassifiedCampaignReport } from "../../part1-api-integration/types";
 
-describe("buildClassificationPrompt", () => {
-  it("formats reviews into the expected prompt structure", () => {
-    const reviews: AppReview[] = [
-      { id: 1, text: "Muy buena app" },
-      { id: 2, text: "Malisima, no sirve" },
+// Shared mock for the Anthropic messages.create method
+const mockCreate = vi.fn();
+
+// Mock the Anthropic SDK — must be a class constructor since code uses `new Anthropic()`
+vi.mock("@anthropic-ai/sdk", () => {
+  return {
+    default: class MockAnthropic {
+      messages = { create: mockCreate };
+    },
+  };
+});
+
+// Mock config to provide a fake API key
+vi.mock("../../shared/config", () => ({
+  config: {
+    anthropicApiKey: () => "test-api-key",
+  },
+}));
+
+/** Factory for test classified campaign reports */
+function buildReport(overrides: Partial<ClassifiedCampaignReport> = {}): ClassifiedCampaignReport {
+  return {
+    id: "camp-001",
+    name: "Test Campaign",
+    metric: 0.5,
+    spend: 5000,
+    revenue: 2000,
+    impressions: 100000,
+    clicks: 3000,
+    reportDate: "2026-04-01T00:00:00Z",
+    status: "critical",
+    evaluatedAt: "2026-04-02T10:00:00Z",
+    ...overrides,
+  };
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+describe("buildSummaryPrompt", () => {
+  it("includes campaign status, name, and metric for each report", () => {
+    const reports = [
+      buildReport({ name: "Slots Promo", status: "critical", metric: 0.4 }),
+      buildReport({ name: "Casino Launch", status: "warning", metric: 1.8 }),
     ];
 
-    const prompt = buildClassificationPrompt(reviews);
+    const prompt = buildSummaryPrompt(reports);
 
-    expect(prompt).toContain("[1]");
-    expect(prompt).toContain("[2]");
-    expect(prompt).toContain("Muy buena app");
-    expect(prompt).toContain("Malisima, no sirve");
-    expect(prompt).toContain("JSON array");
+    expect(prompt).toContain("CRITICAL");
+    expect(prompt).toContain("Slots Promo");
+    expect(prompt).toContain("0.4");
+    expect(prompt).toContain("WARNING");
+    expect(prompt).toContain("Casino Launch");
+    expect(prompt).toContain("1.8");
   });
 
-  it("includes all review IDs in numbered format", () => {
-    const reviews: AppReview[] = [
-      { id: 10, text: "Review A" },
-      { id: 20, text: "Review B" },
-      { id: 30, text: "Review C" },
-    ];
+  it("includes the total report count", () => {
+    const reports = [buildReport(), buildReport({ id: "camp-002" })];
+    const prompt = buildSummaryPrompt(reports);
 
-    const prompt = buildClassificationPrompt(reviews);
-
-    expect(prompt).toContain("[10]");
-    expect(prompt).toContain("[20]");
-    expect(prompt).toContain("[30]");
+    expect(prompt).toContain("2 campañas");
   });
 });
 
-describe("parseClassificationResponse", () => {
-  it("parses valid JSON response from Claude", () => {
-    const response = JSON.stringify([
-      { reviewId: 1, category: "Positivo", spamReason: null, confidence: 0.95 },
-      { reviewId: 2, category: "Negativo", spamReason: null, confidence: 0.88 },
-    ]);
+describe("generateCampaignSummary", () => {
+  it("returns a valid LLMSummary when the LLM responds successfully", async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [
+        { type: "text", text: "Resumen ejecutivo: 3 campañas críticas detectadas." },
+      ],
+    });
 
-    const results = parseClassificationResponse(response, [
-      { id: 1, text: "Muy buena app" },
-      { id: 2, text: "Malisima" },
-    ]);
+    const reports = [buildReport()];
+    const result = await generateCampaignSummary(reports);
 
-    expect(results).toHaveLength(2);
-    expect(results[0].category).toBe("Positivo");
-    expect(results[1].category).toBe("Negativo");
-    expect(results[0].originalText).toBe("Muy buena app");
+    expect(result.summary).toBe("Resumen ejecutivo: 3 campañas críticas detectadas.");
+    expect(result.model).toBe("claude-haiku-4-5-20251001");
+    expect(result.generatedAt).toBeInstanceOf(Date);
+    expect(result.rawResponse).toBeDefined();
   });
 
-  it("handles Spam category with spamReason", () => {
-    const response = JSON.stringify([
-      {
-        reviewId: 3,
-        category: "Spam",
-        spamReason: "Contiene enlace promocional externo",
-        confidence: 0.99,
-      },
-    ]);
+  it("throws a descriptive error when the LLM call fails", async () => {
+    mockCreate.mockRejectedValueOnce(new Error("API rate limit exceeded"));
 
-    const results = parseClassificationResponse(response, [
-      { id: 3, text: "Gana dinero en bit.ly/xxx" },
-    ]);
+    const reports = [buildReport()];
 
-    expect(results[0].category).toBe("Spam");
-    expect(results[0].spamReason).toBe("Contiene enlace promocional externo");
+    await expect(generateCampaignSummary(reports)).rejects.toThrow(
+      "LLM summary generation failed: API rate limit exceeded",
+    );
   });
 
-  it("throws descriptive error on malformed JSON response from LLM", () => {
-    expect(() =>
-      parseClassificationResponse("not valid json", [{ id: 1, text: "test" }]),
-    ).toThrow("LLM returned malformed JSON");
-  });
+  it("throws when the LLM returns empty content", async () => {
+    mockCreate.mockResolvedValueOnce({
+      content: [],
+    });
 
-  it("maps original text from reviews by ID", () => {
-    const response = JSON.stringify([
-      { reviewId: 5, category: "Positivo", spamReason: null, confidence: 0.9 },
-    ]);
+    const reports = [buildReport()];
 
-    const results = parseClassificationResponse(response, [
-      { id: 5, text: "Texto original de la resena" },
-    ]);
-
-    expect(results[0].originalText).toBe("Texto original de la resena");
-    expect(results[0].reviewId).toBe(5);
-  });
-
-  it("returns empty string for unmatched review IDs", () => {
-    const response = JSON.stringify([
-      { reviewId: 999, category: "Negativo", spamReason: null, confidence: 0.7 },
-    ]);
-
-    const results = parseClassificationResponse(response, [
-      { id: 1, text: "Solo esta resena" },
-    ]);
-
-    expect(results[0].originalText).toBe("");
+    await expect(generateCampaignSummary(reports)).rejects.toThrow(
+      "LLM summary generation failed",
+    );
   });
 });

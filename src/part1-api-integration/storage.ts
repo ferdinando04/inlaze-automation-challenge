@@ -34,9 +34,9 @@ interface StorageOutput {
 function buildSummary(reports: ClassifiedCampaignReport[]): StorageOutput["summary"] {
   return {
     total: reports.length,
-    critical: reports.filter((r) => r.classification === "Critical").length,
-    warning: reports.filter((r) => r.classification === "Warning").length,
-    ok: reports.filter((r) => r.classification === "OK").length,
+    critical: reports.filter((r) => r.status === "critical").length,
+    warning: reports.filter((r) => r.status === "warning").length,
+    ok: reports.filter((r) => r.status === "ok").length,
   };
 }
 

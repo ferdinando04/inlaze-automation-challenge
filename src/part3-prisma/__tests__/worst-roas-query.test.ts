@@ -5,7 +5,7 @@ import { getWorstRoasByOperator } from "../worst-roas-query";
 const prisma = new PrismaClient();
 
 beforeAll(async () => {
-  // Seed test data: 2 operators, multiple campaigns in last 7 days
+  // Seed test data: 2 operators, campaigns, and metric snapshots
   const now = new Date();
   const daysAgo = (n: number) => new Date(now.getTime() - n * 24 * 60 * 60 * 1000);
 
@@ -17,28 +17,42 @@ beforeAll(async () => {
     data: { name: "Operator Beta" },
   });
 
-  // Operator Alpha: avg ROAS = (0.5 + 1.0 + 0.8) / 3 = 0.767
-  await prisma.campaign.createMany({
+  // Create campaigns for each operator
+  const campAlpha1 = await prisma.campaign.create({
+    data: { name: "Alpha Camp 1", operatorId: operatorA.id },
+  });
+
+  const campAlpha2 = await prisma.campaign.create({
+    data: { name: "Alpha Camp 2", operatorId: operatorA.id },
+  });
+
+  const campBeta1 = await prisma.campaign.create({
+    data: { name: "Beta Camp 1", operatorId: operatorB.id },
+  });
+
+  // Operator Alpha metrics: avg ROAS = (0.5 + 1.0 + 0.8) / 3 = 0.767
+  await prisma.campaignMetric.createMany({
     data: [
-      { name: "Alpha Camp 1", spend: 1000, revenue: 500, roas: 0.5, operatorId: operatorA.id, reportDate: daysAgo(1) },
-      { name: "Alpha Camp 2", spend: 1000, revenue: 1000, roas: 1.0, operatorId: operatorA.id, reportDate: daysAgo(2) },
-      { name: "Alpha Camp 3", spend: 1000, revenue: 800, roas: 0.8, operatorId: operatorA.id, reportDate: daysAgo(3) },
+      { campaignId: campAlpha1.id, roas: 0.5, recordedAt: daysAgo(1) },
+      { campaignId: campAlpha1.id, roas: 1.0, recordedAt: daysAgo(2) },
+      { campaignId: campAlpha2.id, roas: 0.8, recordedAt: daysAgo(3) },
       // This one is > 7 days ago — should be excluded from the query
-      { name: "Alpha Old Camp", spend: 1000, revenue: 5000, roas: 5.0, operatorId: operatorA.id, reportDate: daysAgo(10) },
+      { campaignId: campAlpha2.id, roas: 5.0, recordedAt: daysAgo(10) },
     ],
   });
 
-  // Operator Beta: avg ROAS = (2.0 + 3.0) / 2 = 2.5
-  await prisma.campaign.createMany({
+  // Operator Beta metrics: avg ROAS = (2.0 + 3.0) / 2 = 2.5
+  await prisma.campaignMetric.createMany({
     data: [
-      { name: "Beta Camp 1", spend: 1000, revenue: 2000, roas: 2.0, operatorId: operatorB.id, reportDate: daysAgo(1) },
-      { name: "Beta Camp 2", spend: 1000, revenue: 3000, roas: 3.0, operatorId: operatorB.id, reportDate: daysAgo(4) },
+      { campaignId: campBeta1.id, roas: 2.0, recordedAt: daysAgo(1) },
+      { campaignId: campBeta1.id, roas: 3.0, recordedAt: daysAgo(4) },
     ],
   });
 });
 
 afterAll(async () => {
-  // Cleanup test data in correct order (campaigns reference operators)
+  // Cleanup test data in correct order (metrics → campaigns → operators)
+  await prisma.campaignMetric.deleteMany();
   await prisma.campaign.deleteMany();
   await prisma.operator.deleteMany();
   await prisma.$disconnect();
@@ -55,10 +69,10 @@ describe("getWorstRoasByOperator", () => {
     expect(results[1].operatorName).toBe("Operator Beta");
   });
 
-  it("only includes campaigns from the last 7 days", async () => {
+  it("only includes metrics from the last 7 days", async () => {
     const results = await getWorstRoasByOperator(prisma);
 
-    // Alpha's old campaign (ROAS 5.0, 10 days ago) should NOT be included
+    // Alpha's old metric (ROAS 5.0, 10 days ago) should NOT be included
     // If it were, Alpha's avg would be (0.5+1.0+0.8+5.0)/4 = 1.825, not 0.767
     const alphaResult = results.find((r) => r.operatorName === "Operator Alpha");
     expect(alphaResult).toBeDefined();

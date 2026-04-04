@@ -28,7 +28,7 @@ const TEST_RETRY_CONFIG: RetryConfig = {
 const MOCK_API_RESPONSE = [
   {
     id: "camp-001",
-    campaignName: "Summer Slots Promo",
+    name: "Summer Slots Promo",
     metric: 0.8,
     spend: 5000,
     revenue: 2000,
@@ -38,7 +38,7 @@ const MOCK_API_RESPONSE = [
   },
   {
     id: "camp-002",
-    campaignName: "Live Casino Launch",
+    name: "Live Casino Launch",
     metric: 3.2,
     spend: 3000,
     revenue: 9600,
@@ -151,7 +151,7 @@ describe("fetchCampaignReports", () => {
     const result = await fetchCampaignReports("https://api.example.com/campaigns");
 
     expect(result.reports).toHaveLength(2);
-    expect(result.reports[0].campaignName).toBe("Summer Slots Promo");
+    expect(result.reports[0].name).toBe("Summer Slots Promo");
     expect(result.reports[1].metric).toBe(3.2);
     expect(result.fetchedAt).toBeDefined();
     expect(result.retriesUsed).toBe(0);
