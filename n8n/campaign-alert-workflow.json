@@ -5,89 +5,148 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "campaign-alerts",
-        "responseMode": "responseNode",
         "options": {}
       },
-      "id": "webhook-trigger",
-      "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [240, 300],
-      "webhookId": "campaign-alerts"
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ef461dfe-5af3-444c-9f51-be7b86c1ef05",
+      "name": "Webhook",
+      "webhookId": "c1db8516-8363-469a-b290-ebba1e745608"
     },
     {
       "parameters": {
         "rules": {
-          "rules": [
+          "values": [
             {
               "conditions": {
-                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
                 "conditions": [
                   {
-                    "id": "rule-critical",
                     "leftValue": "={{ $json.status }}",
                     "rightValue": "critical",
-                    "operator": { "type": "string", "operation": "equals" }
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "3ddab197-42f6-4102-bc44-e1dacf065562"
                   }
                 ],
                 "combinator": "and"
               },
-              "renameOutput": "Critical"
+              "renameOutput": true,
+              "outputKey": "Critical"
             },
             {
               "conditions": {
-                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
                 "conditions": [
                   {
-                    "id": "rule-warning",
+                    "id": "514c3d59-6107-45b7-94c9-bde6de9a7fd4",
                     "leftValue": "={{ $json.status }}",
                     "rightValue": "warning",
-                    "operator": { "type": "string", "operation": "equals" }
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
                   }
                 ],
                 "combinator": "and"
               },
-              "renameOutput": "Warning"
+              "renameOutput": true,
+              "outputKey": "Warning"
             },
             {
               "conditions": {
-                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
                 "conditions": [
                   {
-                    "id": "rule-ok",
+                    "id": "3b0fa9e8-4767-45be-b484-02b7da2fd10a",
                     "leftValue": "={{ $json.status }}",
                     "rightValue": "ok",
-                    "operator": { "type": "string", "operation": "equals" }
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
                   }
                 ],
                 "combinator": "and"
               },
-              "renameOutput": "OK"
+              "renameOutput": true,
+              "outputKey": "OK"
             }
           ]
         },
         "options": {}
       },
-      "id": "switch-classification",
-      "name": "Route by Classification",
       "type": "n8n-nodes-base.switch",
-      "typeVersion": 3,
-      "position": [480, 300]
+      "typeVersion": 3.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "c62c311f-9e65-4bb6-b301-c5cb65e9cc28",
+      "name": "Switch"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.DISCORD_WEBHOOK_URL || 'https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN' }}",
+        "url": "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"embeds\": [\n    {\n      \"title\": \"🚨 CRITICAL Alert: {{ $json.name }}\",\n      \"color\": 16711680,\n      \"fields\": [\n        { \"name\": \"Campaign ID\", \"value\": \"{{ $json.id }}\", \"inline\": true },\n        { \"name\": \"Metric (ROAS)\", \"value\": \"{{ $json.metric }}\", \"inline\": true },\n        { \"name\": \"Spend\", \"value\": \"${{ $json.spend }}\", \"inline\": true },\n        { \"name\": \"Revenue\", \"value\": \"${{ $json.revenue }}\", \"inline\": true },\n        { \"name\": \"Status\", \"value\": \"{{ $json.status }}\", \"inline\": true },\n        { \"name\": \"Report Date\", \"value\": \"{{ $json.reportDate }}\", \"inline\": true }\n      ],\n      \"footer\": { \"text\": \"Inlaze Campaign Monitor — Automated Alert\" },\n      \"timestamp\": \"{{ $now.toISO() }}\"\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"content\": \"🚨 CRITICAL Alert: {{ $json.name }} | ROAS: {{ $json.metric }} | Spend: ${{ $json.spend }}\"\n}",
         "options": {}
       },
-      "id": "discord-alert",
-      "name": "Discord Critical Alert",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [740, 160]
+      "typeVersion": 4.4,
+      "position": [
+        624,
+        -112
+      ],
+      "id": "31879211-5f97-4856-b4d2-5100df2c830d",
+      "name": "Discord Critical Alert"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        608,
+        192
+      ],
+      "id": "c8f41b3f-b2ac-4103-8e77-cdb2bd329d71",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        816,
+        192
+      ],
+      "id": "37e8d4f7-5cb4-4d5f-97cb-2dc05b7356af",
+      "name": "Error Trigger"
     },
     {
       "parameters": {
@@ -95,93 +154,79 @@
         "url": "https://httpbin.org/post",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"action\": \"append_to_sheet\",\n  \"sheetName\": \"Campaign Warnings\",\n  \"data\": {\n    \"campaignId\": \"{{ $json.id }}\",\n    \"name\": \"{{ $json.name }}\",\n    \"metric\": {{ $json.metric }},\n    \"spend\": {{ $json.spend }},\n    \"revenue\": {{ $json.revenue }},\n    \"status\": \"{{ $json.status }}\",\n    \"reportDate\": \"{{ $json.reportDate }}\",\n    \"loggedAt\": \"{{ $now.toISO() }}\"\n  }\n}",
+        "jsonBody": "={\n  \"action\": \"append_to_sheet\",\n  \"sheetName\": \"Campaign Warnings\",\n  \"data\": {\n    \"name\": \"{{ $json.name }}\",\n    \"metric\": \"{{ $json.metric }}\",\n    \"status\": \"{{ $json.status }}\"\n  }\n}",
         "options": {}
       },
-      "id": "sheets-warning",
-      "name": "Google Sheets (Simulated)",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [740, 300]
+      "typeVersion": 4.4,
+      "position": [
+        608,
+        32
+      ],
+      "id": "29ab0899-01b0-4694-b41f-0307641fe541",
+      "name": "Google Sheets (Simulated)"
     },
     {
       "parameters": {
-        "options": {}
+        "jsCode": "const errorData = $input.all()[0].json;\n\nconst errorLog = {\n  level: 'ERROR',\n  source: 'n8n-campaign-alert-workflow',\n  errorMessage: errorData.error?.message || 'Unknown error',\n  timestamp: new Date().toISOString(),\n  context: 'Error captured — workflow continues'\n};\n\nreturn [{ json: errorLog }];"
       },
-      "id": "noop-ok",
-      "name": "OK — No Action",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [740, 460]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={\n  \"status\": \"processed\",\n  \"campaignId\": \"{{ $json.id }}\",\n  \"campaignStatus\": \"{{ $json.status }}\",\n  \"action\": \"{{ $json.status === 'critical' ? 'discord_alert_sent' : $json.status === 'warning' ? 'logged_to_sheet' : 'no_action' }}\",\n  \"processedAt\": \"{{ $now.toISO() }}\"\n}",
-        "options": {}
-      },
-      "id": "respond-critical",
-      "name": "Respond (Critical)",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [980, 160]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={\n  \"status\": \"processed\",\n  \"campaignId\": \"{{ $json.id }}\",\n  \"campaignStatus\": \"{{ $json.status }}\",\n  \"action\": \"logged_to_sheet\",\n  \"processedAt\": \"{{ $now.toISO() }}\"\n}",
-        "options": {}
-      },
-      "id": "respond-warning",
-      "name": "Respond (Warning)",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [980, 300]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={\n  \"status\": \"processed\",\n  \"campaignId\": \"{{ $json.id }}\",\n  \"campaignStatus\": \"ok\",\n  \"action\": \"no_action\",\n  \"processedAt\": \"{{ $now.toISO() }}\"\n}",
-        "options": {}
-      },
-      "id": "respond-ok",
-      "name": "Respond (OK)",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [980, 460]
-    },
-    {
-      "parameters": {},
-      "id": "error-trigger",
-      "name": "Error Trigger",
-      "type": "n8n-nodes-base.errorTrigger",
-      "typeVersion": 1,
-      "position": [240, 600]
-    },
-    {
-      "parameters": {
-        "jsCode": "/**\n * Error handler that logs structured error details\n * WITHOUT stopping workflow execution.\n *\n * Why structured logging? In production, these logs feed into\n * monitoring dashboards (Datadog, Grafana) for alerting on\n * workflow failures that need human intervention.\n */\nconst errorData = items[0].json;\n\nconst errorLog = {\n  level: 'ERROR',\n  source: 'n8n-campaign-alert-workflow',\n  failedNode: errorData.execution?.error?.node || 'unknown',\n  errorMessage: errorData.execution?.error?.message || 'Unknown error',\n  workflowId: errorData.workflow?.id || 'unknown',\n  executionId: errorData.execution?.id || 'unknown',\n  timestamp: new Date().toISOString(),\n  context: 'Error captured by Error Trigger — workflow continues for other items'\n};\n\nreturn [{ json: errorLog }];"
-      },
-      "id": "error-logger",
-      "name": "Error Logger",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [480, 600]
+      "position": [
+        1024,
+        192
+      ],
+      "id": "1d661baa-ec4e-483f-aafb-b5db0fe823ba",
+      "name": "Error Logger"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "96d06150-0be9-4255-9ebe-046e78320cd8",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "ok",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "dc64360e-79c5-4ca2-97dd-76b170490388",
+      "name": "Filter: warning & critical only"
     }
   ],
+  "pinData": {},
   "connections": {
-    "Webhook Trigger": {
+    "Webhook": {
       "main": [
         [
           {
-            "node": "Route by Classification",
+            "node": "Filter: warning & critical only",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Route by Classification": {
+    "Switch": {
       "main": [
         [
           {
@@ -199,40 +244,7 @@
         ],
         [
           {
-            "node": "OK — No Action",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Discord Critical Alert": {
-      "main": [
-        [
-          {
-            "node": "Respond (Critical)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Google Sheets (Simulated)": {
-      "main": [
-        [
-          {
-            "node": "Respond (Warning)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "OK — No Action": {
-      "main": [
-        [
-          {
-            "node": "Respond (OK)",
+            "node": "No Operation, do nothing",
             "type": "main",
             "index": 0
           }
@@ -249,19 +261,29 @@
           }
         ]
       ]
+    },
+    "Filter: warning & critical only": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
+  "active": true,
   "settings": {
     "executionOrder": "v1",
-    "saveManualExecutions": true,
-    "callerPolicy": "workflowsFromSameOwner"
+    "binaryMode": "separate",
+    "availableInMCP": false
   },
-  "staticData": null,
-  "tags": [
-    { "name": "inlaze" },
-    { "name": "campaign-monitoring" },
-    { "name": "igaming" }
-  ],
-  "triggerCount": 1,
-  "pinData": {}
+  "versionId": "6fb05d0f-e926-4ba2-baf7-dda1cbecae8d",
+  "meta": {
+    "instanceId": "335a85c99b9bca20ba9f6e0c44ba68a6b801128f28e91d1c29a073c3435617e0"
+  },
+  "id": "itwzfrEoC1QuvT9i",
+  "tags": []
 }
