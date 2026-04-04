@@ -25,8 +25,8 @@
                 "conditions": [
                   {
                     "id": "rule-critical",
-                    "leftValue": "={{ $json.classification }}",
-                    "rightValue": "Critical",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "critical",
                     "operator": { "type": "string", "operation": "equals" }
                   }
                 ],
@@ -40,8 +40,8 @@
                 "conditions": [
                   {
                     "id": "rule-warning",
-                    "leftValue": "={{ $json.classification }}",
-                    "rightValue": "Warning",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "warning",
                     "operator": { "type": "string", "operation": "equals" }
                   }
                 ],
@@ -55,8 +55,8 @@
                 "conditions": [
                   {
                     "id": "rule-ok",
-                    "leftValue": "={{ $json.classification }}",
-                    "rightValue": "OK",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "ok",
                     "operator": { "type": "string", "operation": "equals" }
                   }
                 ],
@@ -80,7 +80,7 @@
         "url": "={{ $env.DISCORD_WEBHOOK_URL || 'https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN' }}",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"embeds\": [\n    {\n      \"title\": \"🚨 CRITICAL Alert: {{ $json.campaignName }}\",\n      \"color\": 16711680,\n      \"fields\": [\n        { \"name\": \"Campaign ID\", \"value\": \"{{ $json.id }}\", \"inline\": true },\n        { \"name\": \"Metric (ROAS)\", \"value\": \"{{ $json.metric }}\", \"inline\": true },\n        { \"name\": \"Spend\", \"value\": \"${{ $json.spend }}\", \"inline\": true },\n        { \"name\": \"Revenue\", \"value\": \"${{ $json.revenue }}\", \"inline\": true },\n        { \"name\": \"Classification\", \"value\": \"{{ $json.classification }}\", \"inline\": true },\n        { \"name\": \"Report Date\", \"value\": \"{{ $json.reportDate }}\", \"inline\": true }\n      ],\n      \"footer\": { \"text\": \"Inlaze Campaign Monitor — Automated Alert\" },\n      \"timestamp\": \"{{ $now.toISO() }}\"\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"embeds\": [\n    {\n      \"title\": \"🚨 CRITICAL Alert: {{ $json.name }}\",\n      \"color\": 16711680,\n      \"fields\": [\n        { \"name\": \"Campaign ID\", \"value\": \"{{ $json.id }}\", \"inline\": true },\n        { \"name\": \"Metric (ROAS)\", \"value\": \"{{ $json.metric }}\", \"inline\": true },\n        { \"name\": \"Spend\", \"value\": \"${{ $json.spend }}\", \"inline\": true },\n        { \"name\": \"Revenue\", \"value\": \"${{ $json.revenue }}\", \"inline\": true },\n        { \"name\": \"Status\", \"value\": \"{{ $json.status }}\", \"inline\": true },\n        { \"name\": \"Report Date\", \"value\": \"{{ $json.reportDate }}\", \"inline\": true }\n      ],\n      \"footer\": { \"text\": \"Inlaze Campaign Monitor — Automated Alert\" },\n      \"timestamp\": \"{{ $now.toISO() }}\"\n    }\n  ]\n}",
         "options": {}
       },
       "id": "discord-alert",
@@ -95,7 +95,7 @@
         "url": "https://httpbin.org/post",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"action\": \"append_to_sheet\",\n  \"sheetName\": \"Campaign Warnings\",\n  \"data\": {\n    \"campaignId\": \"{{ $json.id }}\",\n    \"campaignName\": \"{{ $json.campaignName }}\",\n    \"metric\": {{ $json.metric }},\n    \"spend\": {{ $json.spend }},\n    \"revenue\": {{ $json.revenue }},\n    \"classification\": \"{{ $json.classification }}\",\n    \"reportDate\": \"{{ $json.reportDate }}\",\n    \"loggedAt\": \"{{ $now.toISO() }}\"\n  }\n}",
+        "jsonBody": "={\n  \"action\": \"append_to_sheet\",\n  \"sheetName\": \"Campaign Warnings\",\n  \"data\": {\n    \"campaignId\": \"{{ $json.id }}\",\n    \"name\": \"{{ $json.name }}\",\n    \"metric\": {{ $json.metric }},\n    \"spend\": {{ $json.spend }},\n    \"revenue\": {{ $json.revenue }},\n    \"status\": \"{{ $json.status }}\",\n    \"reportDate\": \"{{ $json.reportDate }}\",\n    \"loggedAt\": \"{{ $now.toISO() }}\"\n  }\n}",
         "options": {}
       },
       "id": "sheets-warning",
@@ -117,7 +117,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={\n  \"status\": \"processed\",\n  \"campaignId\": \"{{ $json.id }}\",\n  \"classification\": \"{{ $json.classification }}\",\n  \"action\": \"{{ $json.classification === 'Critical' ? 'discord_alert_sent' : $json.classification === 'Warning' ? 'logged_to_sheet' : 'no_action' }}\",\n  \"processedAt\": \"{{ $now.toISO() }}\"\n}",
+        "responseBody": "={\n  \"status\": \"processed\",\n  \"campaignId\": \"{{ $json.id }}\",\n  \"campaignStatus\": \"{{ $json.status }}\",\n  \"action\": \"{{ $json.status === 'critical' ? 'discord_alert_sent' : $json.status === 'warning' ? 'logged_to_sheet' : 'no_action' }}\",\n  \"processedAt\": \"{{ $now.toISO() }}\"\n}",
         "options": {}
       },
       "id": "respond-critical",
@@ -129,7 +129,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={\n  \"status\": \"processed\",\n  \"campaignId\": \"{{ $json.id }}\",\n  \"classification\": \"{{ $json.classification }}\",\n  \"action\": \"logged_to_sheet\",\n  \"processedAt\": \"{{ $now.toISO() }}\"\n}",
+        "responseBody": "={\n  \"status\": \"processed\",\n  \"campaignId\": \"{{ $json.id }}\",\n  \"campaignStatus\": \"{{ $json.status }}\",\n  \"action\": \"logged_to_sheet\",\n  \"processedAt\": \"{{ $now.toISO() }}\"\n}",
         "options": {}
       },
       "id": "respond-warning",
@@ -141,7 +141,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={\n  \"status\": \"processed\",\n  \"campaignId\": \"{{ $json.id }}\",\n  \"classification\": \"OK\",\n  \"action\": \"no_action\",\n  \"processedAt\": \"{{ $now.toISO() }}\"\n}",
+        "responseBody": "={\n  \"status\": \"processed\",\n  \"campaignId\": \"{{ $json.id }}\",\n  \"campaignStatus\": \"ok\",\n  \"action\": \"no_action\",\n  \"processedAt\": \"{{ $now.toISO() }}\"\n}",
         "options": {}
       },
       "id": "respond-ok",

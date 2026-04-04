@@ -35,7 +35,7 @@ npx prisma migrate dev
 npm test
 ```
 
-**Resultado esperado:** 46 tests passing across 6 test files.
+**Resultado esperado:** 44 tests passing across 6 test files.
 
 ---
 
@@ -50,7 +50,7 @@ inlaze-automation-challenge/
 │   ├── part1-api-integration/
 │   │   ├── types.ts               # CampaignReport, ClassifiedReport, RetryConfig
 │   │   ├── api-client.ts          # HTTP client + exponential backoff retry
-│   │   ├── classifier.ts          # metric -> Critical/Warning/OK
+│   │   ├── classifier.ts          # metric -> critical/warning/ok
 │   │   ├── storage.ts             # Save/load results to JSON
 │   │   ├── index.ts               # Orchestrator entry point
 │   │   └── __tests__/             # 22 unit tests
@@ -62,16 +62,15 @@ inlaze-automation-challenge/
 │   │   ├── worst-roas-query.ts    # Prisma groupBy + avg ROAS query
 │   │   └── __tests__/             # 3 integration tests (SQLite real)
 │   └── part4-llm-classification/
-│       ├── types.ts               # ReviewClassification, AppReview
-│       ├── classifier.ts          # Anthropic Claude batch classifier
+│       ├── types.ts               # LLMSummary interface
+│       ├── classifier.ts          # Anthropic Claude campaign summary generator
 │       ├── prompt.md              # Prompt documentado con estrategia
-│       ├── reviews-sample.json    # 100 resenas en espanol
 │       ├── index.ts               # Entry point
-│       └── __tests__/             # 7 unit tests
+│       └── __tests__/             # 5 unit tests
 ├── n8n/
 │   └── campaign-alert-workflow.json  # Exported workflow (JSON, NO screenshot)
 ├── prisma/
-│   └── schema.prisma              # Operator + Campaign models
+│   └── schema.prisma              # Operator + Campaign + CampaignMetric models
 ├── .env.example
 ├── package.json
 ├── tsconfig.json
@@ -90,11 +89,11 @@ npx tsx src/part1-api-integration/index.ts
 
 **Que hace:** Consume una API REST externa, transforma la respuesta en objetos tipados `CampaignReport`, clasifica cada campana por su metrica ROAS:
 
-| Metrica   | Clasificacion | Accion requerida        |
-|-----------|--------------|------------------------|
-| < 1.0     | Critical     | Atencion inmediata     |
-| < 2.5     | Warning      | Monitoreo activo       |
-| >= 2.5    | OK           | Sin accion             |
+| Metrica   | Status   | Accion requerida        |
+|-----------|----------|------------------------|
+| < 1.0     | critical | Atencion inmediata     |
+| < 2.5     | warning  | Monitoreo activo       |
+| >= 2.5    | ok       | Sin accion             |
 
 **Retry con Backoff Exponencial:**
 
@@ -123,9 +122,9 @@ El jitter (factor aleatorio 0.5x-1.5x) previene el "thundering herd" — multipl
 ```
 [Webhook POST /campaign-alerts]
          |
-   [Switch: classification]
+   [Switch: status]
     /       |       \
-Critical  Warning    OK
+critical  warning    ok
    |        |        |
 Discord   HTTP     No-Op
 (embed)  (Sheets)
@@ -137,7 +136,7 @@ Discord   HTTP     No-Op
 
 **Nodos:**
 - **Webhook Trigger:** Recibe POST con datos de campana clasificada
-- **Switch:** Rutea por `classification` (Critical/Warning/OK)
+- **Switch:** Rutea por `status` (critical/warning/ok)
 - **Discord Critical Alert:** Envia embed rojo con metricas al webhook de Discord
 - **Google Sheets (Simulated):** POST a httpbin.org simulando append a Google Sheet
 - **OK — No Action:** No-op para campanas saludables
@@ -149,11 +148,11 @@ curl -X POST http://localhost:5678/webhook/campaign-alerts \
   -H "Content-Type: application/json" \
   -d '{
     "id": "camp-001",
-    "campaignName": "Summer Sale LATAM",
+    "name": "Summer Sale LATAM",
     "metric": 0.4,
     "spend": 5000,
     "revenue": 2000,
-    "classification": "Critical",
+    "status": "critical",
     "reportDate": "2026-04-01"
   }'
 ```
@@ -197,56 +196,69 @@ return allData.map(calculateCTR);
 npx prisma migrate dev
 ```
 
-**Schema:** Dos modelos — `Operator` (socio afiliado) y `Campaign` (campana con metricas de rendimiento).
+**Schema:** Tres modelos — `Operator`, `Campaign` y `CampaignMetric` (metricas de rendimiento como serie temporal).
 
 ```
-Operator (1) ──── (*) Campaign
-  id                    id
-  name                  name, spend, revenue, roas
-  campaigns[]           operatorId, reportDate
+Operator (1) ──── (*) Campaign (1) ──── (*) CampaignMetric
+  id                    id                      id
+  name                  name                    roas
+  campaigns[]           operatorId              campaignId
+                        metrics[]               recordedAt
 ```
 
 **Query: Peor ROAS por Operador (ultimos 7 dias)**
 
-La funcion `getWorstRoasByOperator()` usa Prisma `groupBy`:
+La funcion `getWorstRoasByOperator()`:
 
-1. **Agrupa** campanas por `operatorId` donde `reportDate >= 7 dias atras`
-2. **Calcula** `_avg` de `roas` y `_count` de campanas
-3. **Ordena** por ROAS promedio ascendente (peores primero)
-4. **Enriquece** con nombres de operadores en una segunda query
+1. **Filtra** `CampaignMetric` donde `recordedAt >= 7 dias atras`
+2. **Agrupa** por operador navegando `CampaignMetric → Campaign → Operator`
+3. **Calcula** promedio de `roas` por operador
+4. **Ordena** por ROAS promedio ascendente (peores primero)
+5. **Enriquece** con nombres de operadores en una segunda query
 
 **Por que importa en iGaming:** Operadores con ROAS consistentemente bajo estan quemando presupuesto publicitario. Esta query los identifica para revision del equipo de performance marketing.
 
 ---
 
-### Part 4 — LLM Classification
+### Part 4 — LLM Campaign Summary
 
 ```bash
 # Requiere ANTHROPIC_API_KEY en .env
 npx tsx src/part4-llm-classification/index.ts
 ```
 
-**Que hace:** Clasifica 100 resenas de apps en espanol usando Anthropic Claude (`claude-haiku-4-5-20251001`).
+**Que hace:** Recibe el JSON de `output/classified-reports.json` (resultados de la Parte 1) y genera un resumen ejecutivo en lenguaje natural usando Anthropic Claude.
 
-**Categorias:**
-- **Positivo:** Satisfaccion, elogios, recomendaciones
-- **Negativo:** Frustracion, bugs, quejas
-- **Spam:** Promociones externas, enlaces sospechosos, texto sin sentido (con explicacion obligatoria del POR QUE)
+**Funcion principal:**
 
-**Estrategia de prompting:**
-- System prompt define el rol y las reglas de clasificacion
-- Reviews enviadas en batches de 10 para optimizar tokens
-- Respuesta forzada a JSON puro (sin markdown)
-- Cada clasificacion incluye `confidence` score (0-1)
+```typescript
+async function generateCampaignSummary(
+  reports: CampaignReport[]
+): Promise<LLMSummary>
+```
 
-**Por que Anthropic y no OpenAI:**
-1. Inlaze usa Claude para evaluar pruebas tecnicas — alineacion con el ecosistema del cliente
-2. Excelente comprension del espanol latinoamericano
-3. Respeta consistentemente instrucciones de formato JSON
+**Tipo retornado:**
 
-**Distribucion de las 100 resenas:** ~40 Positivo, ~35 Negativo, ~25 Spam
+```typescript
+interface LLMSummary {
+  generatedAt: Date;
+  model: string;
+  summary: string;
+  rawResponse?: unknown;
+}
+```
 
-**Output:** `output/classification-results.json`
+**Modelo:** `claude-haiku-4-5-20251001` — seleccionado por bajo costo y alta velocidad.
+
+**El prompt instruye al LLM a:**
+- Identificar y destacar por nombre y metrica las campanas en estado `critical`
+- Resumir el estado general de las campanas en `warning`
+- Sugerir al menos una accion concreta basada en los datos
+- Responder en espanol, en formato de resumen ejecutivo (max 150 palabras)
+
+**Error handling:** Si el LLM no responde o lanza excepcion, el error se captura, se loguea con el logger estructurado, y se lanza un `Error` descriptivo. El sistema nunca falla silenciosamente.
+
+**Output:** `output/llm-summary.json`
 
 **Prompt completo documentado en:** `src/part4-llm-classification/prompt.md`
 
@@ -268,16 +280,16 @@ npx vitest run src/part3-prisma/
 npx vitest run src/part4-llm-classification/
 ```
 
-**Cobertura actual:** 46 tests, 6 test files, 100% passing.
+**Cobertura actual:** 44 tests, 6 test files, 100% passing.
 
 | Modulo | Tests | Tipo |
 |--------|-------|------|
-| Part 1 — Classifier | 10 | Unit |
-| Part 1 — API Client | 9 | Unit (mocked HTTP) |
-| Part 1 — Storage | 3 | Unit (filesystem) |
+| Part 1 — Classifier | 15 | Unit |
+| Part 1 — API Client | 8 | Unit (mocked HTTP) |
+| Part 1 — Storage | 6 | Unit (filesystem) |
 | Part 3A — Debugging | 7 | Unit |
 | Part 3B — Prisma | 3 | Integration (SQLite real) |
-| Part 4 — LLM | 7 | Unit |
+| Part 4 — LLM Summary | 5 | Unit (mocked Anthropic, valida LLMSummary) |
 
 ---
 
@@ -295,9 +307,6 @@ Cada modulo se desarrollo siguiendo TDD estricto: RED (test falla) -> GREEN (imp
 ### Exponential Backoff con Jitter
 No es un delay fijo entre reintentos. El backoff crece exponencialmente (1s, 2s, 4s...) con un multiplicador aleatorio (jitter) que previene tormentas de reintentos sincronizados.
 
-### Batch Processing para LLM
-Las 100 resenas se envian en batches de 10 (no de 1 ni de 100) para balancear latencia, costo de tokens y confiabilidad de parsing JSON.
-
 ### n8n Error Handling
 El Error Trigger captura fallos sin detener el workflow. En iGaming, donde las alertas de campanas son criticas, un error en un nodo no debe bloquear el procesamiento de otras campanas.
 
@@ -306,11 +315,11 @@ El Error Trigger captura fallos sin detener el workflow. En iGaming, donde las a
 ## Mejoras Futuras
 
 - **Rate limiting adaptativo** en el cliente API basado en headers `Retry-After`
-- **Cache de clasificaciones LLM** para evitar re-procesar resenas identicas
+- **Cache de resumenes LLM** para evitar re-generar resumenes con datos identicos
 - **Dashboard en tiempo real** conectado al webhook de n8n para visualizar alertas
 - **Prisma con PostgreSQL** en produccion en lugar de SQLite
 - **CI/CD pipeline** con GitHub Actions para lint + test en cada PR
-- **Monitoring** con metricas de latencia por batch de clasificacion LLM
+- **Monitoring** con metricas de latencia de generacion de resumenes LLM
 - **Dead letter queue** en n8n para reintentar alertas fallidas de Discord
 
 ---
