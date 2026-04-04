@@ -22,19 +22,26 @@ const MODEL = "claude-haiku-4-5-20251001";
  * executive summary in Spanish, focusing on critical campaigns
  * and actionable insights for the performance marketing team.
  */
+/**
+ * System prompt instructs Claude to return structured JSON with three fields:
+ * summary (text), criticalCampaigns (array of names), suggestedActions (array).
+ * This enables programmatic access to key data points beyond free-text.
+ */
 const SYSTEM_PROMPT = `Eres un analista senior de performance marketing en la industria de iGaming.
 
-Tu tarea es generar un resumen ejecutivo en español basado en los datos de campañas publicitarias que recibirás. El resumen debe:
+Tu tarea es analizar datos de campañas publicitarias y responder ÚNICAMENTE con un JSON válido con esta estructura exacta:
 
-1. Identificar y destacar por nombre y métrica las campañas en estado "critical"
-2. Resumir el estado general de las campañas en "warning"
-3. Sugerir al menos una acción concreta basada en los datos recibidos
+{
+  "summary": "<resumen ejecutivo en español, máximo 150 palabras, destacando campañas critical por nombre y métrica, resumiendo warnings, y sugiriendo acciones>",
+  "criticalCampaigns": ["<nombre de cada campaña en estado critical>"],
+  "suggestedActions": ["<acción concreta sugerida basada en los datos>"]
+}
 
 Reglas:
-- Máximo 150 palabras
-- Formato de resumen ejecutivo profesional
-- Lenguaje directo y orientado a la acción
-- Responde SOLO con el texto del resumen, sin markdown ni encabezados`;
+- El campo "summary" debe ser un resumen ejecutivo profesional, directo y orientado a la acción
+- "criticalCampaigns" debe contener SOLO los nombres exactos de campañas con status critical
+- "suggestedActions" debe tener al menos una acción concreta
+- Responde ÚNICAMENTE con el JSON, sin texto adicional ni markdown`;
 
 /**
  * Builds the user prompt with campaign data formatted for the LLM.
@@ -76,23 +83,34 @@ export async function generateCampaignSummary(
     });
 
     // Extract text from content blocks
-    const summary = response.content
+    const rawText = response.content
       .filter((block): block is Anthropic.TextBlock => block.type === "text")
       .map((block) => block.text)
       .join("");
 
-    if (!summary) {
+    if (!rawText) {
       throw new Error("LLM returned an empty response — no text content blocks found");
     }
 
+    // Parse the structured JSON response from the LLM
+    const parsed = JSON.parse(rawText) as {
+      summary: string;
+      criticalCampaigns: string[];
+      suggestedActions: string[];
+    };
+
     logger.info("Executive summary generated successfully", {
-      summaryLength: summary.length,
+      summaryLength: parsed.summary.length,
+      criticalCount: parsed.criticalCampaigns.length,
+      actionCount: parsed.suggestedActions.length,
     });
 
     return {
       generatedAt: new Date(),
       model: MODEL,
-      summary,
+      summary: parsed.summary,
+      criticalCampaigns: parsed.criticalCampaigns,
+      suggestedActions: parsed.suggestedActions,
       rawResponse: response,
     };
   } catch (error) {

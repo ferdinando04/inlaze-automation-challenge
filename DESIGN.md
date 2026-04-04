@@ -1,25 +1,39 @@
 # Diseño: Agente de IA para Gestión Automática de Campañas
 
-## Arquitectura del Sistema
+## Arquitectura
 
-El sistema tiene tres capas: un LLM como orquestador, una base de datos de métricas, y un loop ReAct (Reason → Act → Observe) que permite al agente tomar decisiones iterativas.
+El sistema tiene tres capas: un LLM orquestador con tool-calling, una base de datos de métricas, y un loop ReAct (Reason → Act → Observe → Repeat) que permite decisiones iterativas.
+
+```
+[CampaignData] → [fetch_campaigns] → [LLM ReAct Loop]
+                                            |
+                    ┌───────────────────────┤
+                    ↓                       ↓
+            [classify_campaign]      [get_history]
+                    |                       |
+                    └───────────┬───────────┘
+                                ↓
+                    [send_alert / log_action]
+                                ↓
+                    [Audit Log: qué hizo, por qué, cuándo]
+```
 
 ## Tools del Agente
 
-El agente dispone de tres herramientas concretas:
+Mediante tool-calling, el LLM invoca herramientas concretas:
 
-- **queryWorstCampaigns(days: number):** consulta métricas de ROAS desde la base de datos, filtrando por ventana temporal.
-- **pauseCampaign(id: string):** pausa una campaña específica invocando la API del ad server.
-- **sendAlert(channel: string, payload: object):** envía notificaciones a Discord, Slack o email.
+- **queryWorstCampaigns(days):** consulta ROAS desde la base de datos.
+- **pauseCampaign(id):** pausa una campaña vía API del ad server.
+- **sendAlert(channel, payload):** notifica a Discord, Slack o email.
 
 ## Lógica de Decisión
 
-El agente ejecuta ciclos autónomos: consulta métricas → evalúa contra umbrales definidos → decide si pausar, alertar o escalar → invoca la tool correspondiente → observa el resultado → repite si es necesario.
+El agente ejecuta el loop Reason → Act → Observe → Repeat: consulta métricas, evalúa contra umbrales, decide si pausar o alertar, invoca la tool correspondiente, observa el resultado y repite si es necesario.
 
 ## Auditabilidad
 
-Cada ciclo genera un registro inmutable con agentRunId, tool invocada, input, output, decisión tomada y timestamp. Ninguna acción automática ocurre sin este log, garantizando trazabilidad completa.
+Cada tool call genera un registro inmutable con agentRunId, tool invocada, input, output, decisión y timestamp. Ninguna acción ocurre sin este log.
 
-## Agente vs Script Determinista
+## Agente vs Script
 
-La diferencia clave es que un script sigue reglas fijas (if/else), mientras que el agente razona sobre contexto, combina múltiples tools dinámicamente y adapta su plan según los resultados observados en cada iteración.
+Un script sigue reglas fijas (if/else). El agente razona sobre contexto, combina tools mediante tool-calling y adapta su plan según resultados observados.

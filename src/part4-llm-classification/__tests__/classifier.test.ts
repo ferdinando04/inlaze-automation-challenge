@@ -21,6 +21,13 @@ vi.mock("../../shared/config", () => ({
   },
 }));
 
+/** Structured JSON response matching what the LLM should return */
+const MOCK_LLM_JSON = {
+  summary: "Resumen ejecutivo: 2 campañas críticas detectadas.",
+  criticalCampaigns: ["Slots Promo LatAm", "Poker Ads Mexico"],
+  suggestedActions: ["Pausar Slots Promo LatAm por ROAS < 0.5"],
+};
+
 /** Factory for test classified campaign reports */
 function buildReport(overrides: Partial<ClassifiedCampaignReport> = {}): ClassifiedCampaignReport {
   return {
@@ -68,17 +75,17 @@ describe("buildSummaryPrompt", () => {
 });
 
 describe("generateCampaignSummary", () => {
-  it("returns a valid LLMSummary when the LLM responds successfully", async () => {
+  it("returns a valid LLMSummary with structured fields", async () => {
     mockCreate.mockResolvedValueOnce({
-      content: [
-        { type: "text", text: "Resumen ejecutivo: 3 campañas críticas detectadas." },
-      ],
+      content: [{ type: "text", text: JSON.stringify(MOCK_LLM_JSON) }],
     });
 
     const reports = [buildReport()];
     const result = await generateCampaignSummary(reports);
 
-    expect(result.summary).toBe("Resumen ejecutivo: 3 campañas críticas detectadas.");
+    expect(result.summary).toBe(MOCK_LLM_JSON.summary);
+    expect(result.criticalCampaigns).toEqual(["Slots Promo LatAm", "Poker Ads Mexico"]);
+    expect(result.suggestedActions).toEqual(["Pausar Slots Promo LatAm por ROAS < 0.5"]);
     expect(result.model).toBe("claude-haiku-4-5-20251001");
     expect(result.generatedAt).toBeInstanceOf(Date);
     expect(result.rawResponse).toBeDefined();
