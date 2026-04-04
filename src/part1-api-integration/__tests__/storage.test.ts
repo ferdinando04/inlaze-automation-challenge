@@ -20,7 +20,7 @@ function buildClassifiedReport(
     clicks: 3000,
     reportDate: "2026-04-01T00:00:00Z",
     status: "critical",
-    evaluatedAt: "2026-04-02T10:00:00Z",
+    evaluatedAt: new Date("2026-04-02T10:00:00Z"),
     ...overrides,
   };
 }

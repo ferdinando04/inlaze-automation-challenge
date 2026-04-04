@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { calculateCTR, processAllCampaigns } from "../fixed";
+import { calculateCTR, processAllCampaigns, filterLowCTRCampaigns } from "../fixed";
 
 describe("calculateCTR (Bug Fix #1: Division by Zero)", () => {
   it("calculates CTR correctly with valid impressions", () => {
@@ -66,5 +66,48 @@ describe("processAllCampaigns (Bug Fix #2: Sequential → Parallel)", () => {
   it("handles empty campaign list", async () => {
     const results = await processAllCampaigns([]);
     expect(results).toEqual([]);
+  });
+});
+
+describe("filterLowCTRCampaigns (Req 12: filtro CTR < 0.02)", () => {
+  it("retorna solo campañas con ctr < 0.02", () => {
+    const campaigns = [
+      { id: "a", ctr: 0.005 },
+      { id: "b", ctr: 0.05 },
+      { id: "c", ctr: 0.015 },
+      { id: "d", ctr: 0.02 },
+    ];
+    const result = filterLowCTRCampaigns(campaigns);
+
+    expect(result).toHaveLength(2);
+    expect(result.map((r) => r.id)).toEqual(["a", "c"]);
+  });
+
+  it("ordena resultados de menor a mayor CTR", () => {
+    const campaigns = [
+      { id: "x", ctr: 0.015 },
+      { id: "y", ctr: 0.003 },
+      { id: "z", ctr: 0.01 },
+    ];
+    const result = filterLowCTRCampaigns(campaigns);
+
+    expect(result[0].id).toBe("y");
+    expect(result[1].id).toBe("z");
+    expect(result[2].id).toBe("x");
+  });
+
+  it("retorna array vacío si ninguna campaña cumple el umbral", () => {
+    const campaigns = [
+      { id: "a", ctr: 0.05 },
+      { id: "b", ctr: 0.02 },
+    ];
+    const result = filterLowCTRCampaigns(campaigns);
+
+    expect(result).toEqual([]);
+  });
+
+  it("retorna array vacío si el input está vacío", () => {
+    const result = filterLowCTRCampaigns([]);
+    expect(result).toEqual([]);
   });
 });

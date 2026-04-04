@@ -85,4 +85,17 @@ async function processAllCampaigns(
   return allCampaignData.map(calculateCTR);
 }
 
-export { calculateCTR, fetchCampaignData, processAllCampaigns };
+/**
+ * Filters campaigns with CTR below the 0.02 threshold and sorts ascending.
+ *
+ * In iGaming performance marketing, a CTR below 2% signals that ad creative
+ * or targeting is ineffective — these campaigns need immediate review.
+ * Sorting worst-first lets the team prioritize the most underperforming ads.
+ */
+function filterLowCTRCampaigns(campaigns: CampaignResult[]): CampaignResult[] {
+  return campaigns
+    .filter((c) => c.ctr < 0.02)
+    .sort((a, b) => a.ctr - b.ctr);
+}
+
+export { calculateCTR, fetchCampaignData, processAllCampaigns, filterLowCTRCampaigns };

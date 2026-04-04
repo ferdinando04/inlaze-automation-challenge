@@ -35,8 +35,8 @@ export type ClassificationLevel = "ok" | "warning" | "critical";
 /** Campaign report enriched with its classification level */
 export interface ClassifiedCampaignReport extends CampaignReport {
   status: ClassificationLevel;
-  /** ISO 8601 timestamp of when the classification was performed */
-  evaluatedAt: string;
+  /** Timestamp of when the classification was performed */
+  evaluatedAt: Date;
 }
 
 /** Configuration for the exponential backoff retry mechanism */

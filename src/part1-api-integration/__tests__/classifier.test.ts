@@ -75,15 +75,15 @@ describe("classifyCampaign", () => {
     expect(result.revenue).toBe(3000);
   });
 
-  it("adds evaluatedAt timestamp", () => {
+  it("adds evaluatedAt as a Date object", () => {
     const report = buildReport({ metric: 3.0 });
-    const before = new Date().toISOString();
+    const before = new Date();
     const result = classifyCampaign(report);
-    const after = new Date().toISOString();
+    const after = new Date();
 
-    expect(result.evaluatedAt).toBeDefined();
-    expect(result.evaluatedAt >= before).toBe(true);
-    expect(result.evaluatedAt <= after).toBe(true);
+    expect(result.evaluatedAt).toBeInstanceOf(Date);
+    expect(result.evaluatedAt.getTime()).toBeGreaterThanOrEqual(before.getTime());
+    expect(result.evaluatedAt.getTime()).toBeLessThanOrEqual(after.getTime());
   });
 });
 

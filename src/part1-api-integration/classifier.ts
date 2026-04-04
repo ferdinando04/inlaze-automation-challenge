@@ -38,7 +38,7 @@ export function classifyCampaign(report: CampaignReport): ClassifiedCampaignRepo
   return {
     ...report,
     status: getClassificationLevel(report.metric),
-    evaluatedAt: new Date().toISOString(),
+    evaluatedAt: new Date(),
   };
 }
 
