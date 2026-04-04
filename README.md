@@ -122,16 +122,16 @@ El jitter (factor aleatorio 0.5x-1.5x) previene el "thundering herd" — multipl
 ```
 [Webhook POST /campaign-alerts]
          |
+[Filter: solo warning & critical]
+         |
    [Switch: status]
-    /       |       \
-critical  warning    ok
-   |        |        |
-Discord   HTTP     No-Op
-(embed)  (Sheets)
-   |        |        |
-[Respond] [Respond] [Respond]
+    /       |       
+critical  warning    
+   |        |        
+Discord   HTTP     
+(Discord) (Sheets/httpbin)
 
-[Error Trigger] -> [Code: Error Logger]
+[Error Trigger] -> [Error Logger]
 ```
 
 **Nodos:**
@@ -280,14 +280,14 @@ npx vitest run src/part3-prisma/
 npx vitest run src/part4-llm-classification/
 ```
 
-**Cobertura actual:** 44 tests, 6 test files, 100% passing.
+**Cobertura actual:** 48 tests, 6 test files, 100% passing.
 
 | Modulo | Tests | Tipo |
 |--------|-------|------|
 | Part 1 — Classifier | 15 | Unit |
 | Part 1 — API Client | 8 | Unit (mocked HTTP) |
 | Part 1 — Storage | 6 | Unit (filesystem) |
-| Part 3A — Debugging | 7 | Unit |
+| Part 3A — Debugging | 11 | Unit |
 | Part 3B — Prisma | 3 | Integration (SQLite real) |
 | Part 4 — LLM Summary | 5 | Unit (mocked Anthropic, valida LLMSummary) |
 
