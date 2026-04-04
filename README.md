@@ -35,7 +35,7 @@ npx prisma migrate dev
 npm test
 ```
 
-**Resultado esperado:** 44 tests passing across 6 test files.
+**Resultado esperado:** 48 tests passing across 6 test files.
 
 ---
 
@@ -53,11 +53,11 @@ inlaze-automation-challenge/
 │   │   ├── classifier.ts          # metric -> critical/warning/ok
 │   │   ├── storage.ts             # Save/load results to JSON
 │   │   ├── index.ts               # Orchestrator entry point
-│   │   └── __tests__/             # 22 unit tests
+│   │   └── __tests__/             # 29 unit tests
 │   ├── part3-debugging/
 │   │   ├── original-buggy.ts      # Snippet original (NO TOCAR)
 │   │   ├── fixed.ts               # Version corregida con comentarios
-│   │   └── __tests__/             # 7 tests
+│   │   └── __tests__/             # 11 tests
 │   ├── part3-prisma/
 │   │   ├── worst-roas-query.ts    # Prisma groupBy + avg ROAS query
 │   │   └── __tests__/             # 3 integration tests (SQLite real)
@@ -244,6 +244,8 @@ interface LLMSummary {
   generatedAt: Date;
   model: string;
   summary: string;
+  criticalCampaigns: string[];
+  suggestedActions: string[];
   rawResponse?: unknown;
 }
 ```
